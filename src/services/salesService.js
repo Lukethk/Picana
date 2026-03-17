@@ -28,9 +28,29 @@ export const salesService = {
             options: item.options || {} // Include options (toppings/flavors)
         }));
 
-        const { error: itemsError } = await supabase
-            .from('sale_items')
-            .insert(itemsToInsert);
+        let itemsError;
+        {
+            const res = await supabase
+                .from('sale_items')
+                .insert(itemsToInsert);
+            itemsError = res.error;
+        }
+
+        if (itemsError && String(itemsError.message || '').toLowerCase().includes("could not find the 'options' column")) {
+            const itemsWithoutOptions = saleData.items.map(item => ({
+                sale_id: sale.id,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+            }));
+
+            const retry = await supabase
+                .from('sale_items')
+                .insert(itemsWithoutOptions);
+
+            if (retry.error) throw retry.error;
+            return { ...sale, items: itemsWithoutOptions };
+        }
 
         if (itemsError) throw itemsError;
 
@@ -68,6 +88,26 @@ export const salesService = {
             .eq('sale_id', saleId);
             
         if (error) throw error;
+        return data;
+    },
+
+    deleteSale: async (saleId) => {
+        const { error: itemsError } = await supabase
+            .from('sale_items')
+            .delete()
+            .eq('sale_id', saleId);
+
+        if (itemsError) throw itemsError;
+
+        const { data, error } = await supabase
+            .from('sales')
+            .delete()
+            .eq('id', saleId)
+            .select()
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) throw new Error('No se pudo eliminar la venta (no encontrada o sin permisos).');
         return data;
     }
 };

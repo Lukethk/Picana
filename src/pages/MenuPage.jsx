@@ -1,15 +1,17 @@
 
 import { useState } from 'react';
-import {AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Settings, Edit3, Trash2, Plus, Image as ImageIcon, LayoutGrid, List, X, Save, Loader2, Upload, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { formatBs } from '../utils/format';
 import { productService } from '../services/productService';
 
-export default function MenuPage({ products, categories, onManageExtras }) {
+export default function MenuPage({ products, categories, onManageExtras, onRefresh }) {
     const [activeTab, setActiveTab] = useState('products');
     const [viewMode, setViewMode] = useState('grid');
     const [editingProduct, setEditingProduct] = useState(null); 
     const [isSaving, setIsSaving] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [isSavingCategory, setIsSavingCategory] = useState(false);
     const [searchTerm, setSearchTerm] = useState(''); 
     const [selectedCategory, setSelectedCategory] = useState('all'); // Category filter
 
@@ -25,19 +27,16 @@ export default function MenuPage({ products, categories, onManageExtras }) {
         setIsSaving(true);
         try {
             if (formData.id) {
-                await productService.update(formData.id, formData);
+                const { id, ...updates } = formData;
+                await productService.update(id, updates);
             } else {
-                await productService.create(formData);
+                const { id: _id, ...payload } = formData;
+                await productService.create(payload);
             }
-            // window.location.reload(); 
-            // Instead of reloading, close modal and maybe refresh data if passed as prop, 
-            // but reloading is a quick fix. Better UX is to update local state.
-            // For now, let's keep reload but user reported errors. 
-            // Maybe the error is in upload logic.
-            window.location.reload();
+            if (onRefresh) await onRefresh();
         } catch (err) {
             console.error(err);
-            alert('Error al guardar producto');
+            alert(err?.message || 'Error al guardar producto');
         } finally {
             setIsSaving(false);
             setEditingProduct(null);
@@ -48,10 +47,41 @@ export default function MenuPage({ products, categories, onManageExtras }) {
         if (!confirm('¿Estás seguro de eliminar este producto?')) return;
         try {
             await productService.delete(id);
-            window.location.reload();
+            if (onRefresh) await onRefresh();
         } catch (err) {
             console.error(err);
-            alert('Error al eliminar');
+            alert(err?.message || 'Error al eliminar');
+        }
+    };
+
+    const handleSaveCategory = async (formData) => {
+        setIsSavingCategory(true);
+        try {
+            if (formData.id) {
+                const { id, ...updates } = formData;
+                await productService.updateCategory(id, updates);
+            } else {
+                const { id: _id, ...payload } = formData;
+                await productService.createCategory(payload);
+            }
+            if (onRefresh) await onRefresh();
+        } catch (err) {
+            console.error(err);
+            alert(err?.message || 'Error al guardar categoría');
+        } finally {
+            setIsSavingCategory(false);
+            setEditingCategory(null);
+        }
+    };
+
+    const handleDeleteCategory = async (id) => {
+        if (!confirm('¿Estás seguro de eliminar esta categoría?')) return;
+        try {
+            await productService.deleteCategory(id);
+            if (onRefresh) await onRefresh();
+        } catch (err) {
+            console.error(err);
+            alert(err?.message || 'No se pudo eliminar la categoría (puede estar en uso).');
         }
     };
 
@@ -161,7 +191,12 @@ export default function MenuPage({ products, categories, onManageExtras }) {
                     />
                 )
             ) : (
-                <CategoriesTable categories={categories} />
+                <CategoriesTable
+                    categories={categories}
+                    onCreate={() => setEditingCategory('new')}
+                    onEdit={setEditingCategory}
+                    onDelete={handleDeleteCategory}
+                />
             )}
 
             {/* Product Modal */}
@@ -173,6 +208,18 @@ export default function MenuPage({ products, categories, onManageExtras }) {
                         onClose={() => setEditingProduct(null)}
                         onSave={handleSave}
                         isSaving={isSaving}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Category Modal */}
+            <AnimatePresence>
+                {editingCategory && (
+                    <CategoryModal
+                        category={editingCategory === 'new' ? null : editingCategory}
+                        onClose={() => setEditingCategory(null)}
+                        onSave={handleSaveCategory}
+                        isSaving={isSavingCategory}
                     />
                 )}
             </AnimatePresence>
@@ -190,7 +237,8 @@ function ProductModal({ product, categories, onClose, onSave, isSaving }) {
                 price: product.price,
                 description: product.description || '',
                 image_url: product.image_url || '',
-                is_active: product.is_active
+                is_active: product.is_active,
+                has_extras: typeof product.has_extras === 'boolean' ? product.has_extras : true
             };
         }
         return {
@@ -199,7 +247,8 @@ function ProductModal({ product, categories, onClose, onSave, isSaving }) {
             price: '',
             description: '',
             image_url: '',
-            is_active: true
+            is_active: true,
+            has_extras: true
         };
     });
     const [uploadMode, setUploadMode] = useState('url'); // 'url' | 'file'
@@ -209,7 +258,14 @@ function ProductModal({ product, categories, onClose, onSave, isSaving }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        let finalData = { ...formData };
+        const price = Number(formData.price);
+        const categoryId = formData.category_id === '' ? null : formData.category_id;
+        let finalData = {
+            ...formData,
+            category_id: categoryId,
+            price: Number.isFinite(price) ? price : 0,
+            has_extras: Boolean(formData.has_extras)
+        };
 
         if (uploadMode === 'file' && file) {
             setUploading(true);
@@ -218,15 +274,17 @@ function ProductModal({ product, categories, onClose, onSave, isSaving }) {
                 finalData.image_url = url;
             } catch (err) {
                 console.error(err);
-                // Fallback: If upload fails (e.g. no bucket), warn user but allow saving without image update
-                // or ask to use URL.
-                alert('No se pudo subir la imagen (Bucket no configurado o error de red). Intenta usar una URL.');
+                alert(err?.message || 'No se pudo subir la imagen. Revisa el bucket/policies de Storage o usa una URL.');
                 setUploading(false);
                 return;
             }
         }
 
-        onSave(finalData);
+        try {
+            await onSave(finalData);
+        } finally {
+            setUploading(false);
+        }
     };
 
     return (
@@ -288,6 +346,19 @@ function ProductModal({ product, categories, onClose, onSave, isSaving }) {
                                 placeholder="0.00"
                                 value={formData.price}
                                 onChange={e => setFormData({...formData, price: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="col-span-2 flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                            <div>
+                                <p className="text-sm font-semibold text-slate-800">Permitir extras</p>
+                                <p className="text-xs text-slate-500">Toppings y sabores en ventas</p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="h-5 w-5 accent-indigo-600"
+                                checked={Boolean(formData.has_extras)}
+                                onChange={(e) => setFormData({ ...formData, has_extras: e.target.checked })}
                             />
                         </div>
 
@@ -522,12 +593,12 @@ function ProductsTable({ products, categories, onEdit, onDelete }) {
     );
 }
 
-function CategoriesTable({ categories }) {
+function CategoriesTable({ categories, onCreate, onEdit, onDelete }) {
     return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                 <h3 className="font-semibold text-slate-700 text-sm">Listado de Categorías</h3>
-                <button className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center gap-1">
+                <button onClick={onCreate} className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center gap-1">
                     <Plus size={16} /> Nueva Categoría
                 </button>
             </div>
@@ -545,10 +616,10 @@ function CategoriesTable({ categories }) {
                                 <td className="px-5 py-3 font-medium text-slate-800">{c.name}</td>
                                 <td className="px-5 py-3 text-center">
                                     <div className="flex items-center justify-center gap-2">
-                                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors">
+                                        <button onClick={() => onEdit(c)} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors">
                                             <Edit3 size={14} />
                                         </button>
-                                        <button className="p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors">
+                                        <button onClick={() => onDelete(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-red-50 transition-colors">
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
@@ -558,6 +629,68 @@ function CategoriesTable({ categories }) {
                     </tbody>
                 </table>
             </div>
+        </div>
+    );
+}
+
+function CategoryModal({ category, onClose, onSave, isSaving }) {
+    const [name, setName] = useState(category?.name || '');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        await onSave({ ...(category ? { id: category.id } : {}), name });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col"
+            >
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 className="font-bold text-lg text-slate-800">
+                        {category ? 'Editar Categoría' : 'Nueva Categoría'}
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Nombre</label>
+                        <input
+                            autoFocus
+                            required
+                            type="text"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                            placeholder="Ej. Bebidas"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            disabled={isSaving}
+                            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md shadow-indigo-200 transition-all flex items-center gap-2 disabled:opacity-70"
+                        >
+                            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
         </div>
     );
 }

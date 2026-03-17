@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatBs } from '../../utils/format';
 import { ShoppingBag, Image as ImageIcon } from 'lucide-react';
 
-export default function ProductCard({ cup, onSelect }) {
+function ProductCard({ cup, onSelect }) {
     const [ripple, setRipple] = useState(false);
 
     const handleClick = () => {
@@ -18,7 +18,7 @@ export default function ProductCard({ cup, onSelect }) {
             whileTap={{ scale: 0.98 }}
             onClick={handleClick}
             className="group relative w-full bg-white border border-slate-100 rounded-2xl 
-                 cursor-pointer overflow-hidden transition-all duration-300 hover:border-indigo-200 shadow-sm flex flex-col h-full"
+                 cursor-pointer overflow-hidden transition-all duration-200 hover:border-indigo-200 hover:shadow-md active:shadow-sm shadow-sm flex flex-col h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
         >
             {/* Image Area */}
             <div className="relative w-full aspect-[4/3] bg-slate-50 overflow-hidden flex items-center justify-center">
@@ -79,3 +79,5 @@ export default function ProductCard({ cup, onSelect }) {
         </motion.button>
     );
 }
+
+export default memo(ProductCard);

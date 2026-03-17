@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { productService } from '../services/productService';
 import { toppingService } from '../services/toppingService';
@@ -22,6 +22,62 @@ export function useData() {
     const [error, setError] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
 
+    const defaultSettings = useMemo(() => ({
+        printer_config: {
+            enabled: false,
+            mode: 'browser',
+            ip: '',
+            port: 9100,
+            paper_width_mm: 80,
+            chars_per_line: 48,
+            copies: 1,
+        },
+        receipt_config: {
+            header_title: '',
+            header_lines: '',
+            footer_lines: '',
+            show_datetime: true,
+            show_sale_id: true,
+            show_payment_method: true,
+            show_item_options: true,
+        }
+    }), []);
+
+    const readLocalSettings = useCallback(() => {
+        try {
+            const raw = localStorage.getItem('acai_business_settings');
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch {
+            return null;
+        }
+    }, []);
+
+    const writeLocalSettings = useCallback((next) => {
+        localStorage.setItem('acai_business_settings', JSON.stringify(next));
+    }, []);
+
+    const normalizeSettings = useCallback((row, local) => {
+        const fromRowPrinter = row?.printer_config ?? row?.config?.printer_config;
+        const fromRowReceipt = row?.receipt_config ?? row?.config?.receipt_config;
+        const merged = {
+            ...(defaultSettings || {}),
+            ...(local || {}),
+            ...(row || {}),
+            printer_config: {
+                ...(defaultSettings?.printer_config || {}),
+                ...(local?.printer_config || {}),
+                ...(fromRowPrinter || {}),
+            },
+            receipt_config: {
+                ...(defaultSettings?.receipt_config || {}),
+                ...(local?.receipt_config || {}),
+                ...(fromRowReceipt || {}),
+            },
+        };
+        return merged;
+    }, [defaultSettings]);
+
     // Legacy fallback
     const loadLocalData = useCallback(() => {
         console.warn('Cargando datos locales de respaldo...');
@@ -30,8 +86,10 @@ export function useData() {
         setToppings([]); // No toppings in fallback for now
         setInventory(DEFAULT_INVENTORY);
         setSales(JSON.parse(localStorage.getItem('acai_orders')) || []);
+        const local = readLocalSettings();
+        setSettings(normalizeSettings(null, local));
         setIsConnected(false);
-    }, []);
+    }, [normalizeSettings, readLocalSettings]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -78,7 +136,12 @@ export function useData() {
             }));
             setSales(normalizedSales);
 
-            if (conf) setSettings(conf);
+            {
+                const local = readLocalSettings();
+                const nextSettings = normalizeSettings(conf, local);
+                setSettings(nextSettings);
+                writeLocalSettings(nextSettings);
+            }
 
             setError(null);
             setIsConnected(true);
@@ -90,7 +153,7 @@ export function useData() {
         } finally {
             setLoading(false);
         }
-    }, [loadLocalData]);
+    }, [loadLocalData, normalizeSettings, readLocalSettings, writeLocalSettings]);
 
     const saveSale = async (saleData) => {
         // saleData: { total, method, cartItems }
@@ -148,6 +211,62 @@ export function useData() {
         }
     };
 
+    const deleteSale = async (saleId) => {
+        if (isConnected) {
+            await salesService.deleteSale(saleId);
+            setSales(prev => prev.filter(s => String(s.id) !== String(saleId)));
+            return;
+        }
+
+        const existing = JSON.parse(localStorage.getItem('acai_orders') || '[]');
+        const next = existing.filter(s => String(s.id) !== String(saleId));
+        localStorage.setItem('acai_orders', JSON.stringify(next));
+        setSales(prev => prev.filter(s => String(s.id) !== String(saleId)));
+    };
+
+    const saveBusinessSettings = async (partial) => {
+        const local = readLocalSettings();
+        const merged = normalizeSettings({ ...(settings || {}), ...(partial || {}) }, local);
+        writeLocalSettings(merged);
+        setSettings(merged);
+
+        if (!isConnected) return merged;
+
+        const currentId = settings?.id ?? merged?.id;
+        const payloadA = {
+            ...(currentId ? { id: currentId } : {}),
+            printer_config: merged.printer_config,
+            receipt_config: merged.receipt_config,
+        };
+
+        try {
+            const saved = await settingsService.updateSettings(payloadA);
+            const next = normalizeSettings(saved, merged);
+            writeLocalSettings(next);
+            setSettings(next);
+            return next;
+        } catch (err) {
+            const msg = String(err?.message || '').toLowerCase();
+            const missingPrinterCol = msg.includes("could not find the 'printer_config' column");
+            const missingReceiptCol = msg.includes("could not find the 'receipt_config' column");
+            if (missingPrinterCol || missingReceiptCol) {
+                const payloadB = {
+                    ...(currentId ? { id: currentId } : {}),
+                    config: {
+                        printer_config: merged.printer_config,
+                        receipt_config: merged.receipt_config,
+                    }
+                };
+                const savedB = await settingsService.updateSettings(payloadB);
+                const nextB = normalizeSettings(savedB, merged);
+                writeLocalSettings(nextB);
+                setSettings(nextB);
+                return nextB;
+            }
+            throw err;
+        }
+    };
+
     const updateInventory = async (id, newQty) => {
         if (isConnected) {
              await inventoryService.adjustStock(id, newQty);
@@ -175,6 +294,8 @@ export function useData() {
         error,
         isConnected,
         saveSale,
+        deleteSale,
+        saveBusinessSettings,
         updateInventory,
         refresh: loadData
     };

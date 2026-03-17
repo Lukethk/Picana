@@ -3,7 +3,6 @@ import {
     ShoppingCart,
     Package,
     BarChart3,
-    LayoutDashboard,
     UtensilsCrossed,
     Settings
 } from 'lucide-react';
@@ -16,7 +15,7 @@ const NAV = [
     { id: 'settings', label: 'Configuración', icon: Settings },
 ];
 
-export default function Sidebar({ view, setView, cartCount, open, setOpen }) {
+export default function Sidebar({ businessName, view, setView, cartCount, open, setOpen }) {
     return (
         <>
             {/* Mobile overlay */}
@@ -46,7 +45,7 @@ export default function Sidebar({ view, setView, cartCount, open, setOpen }) {
                         <UtensilsCrossed size={18} className="text-white" />
                     </div>
                     <div>
-                        <p className="text-white font-bold text-base leading-none tracking-tight">La Picana</p>
+                        <p className="text-white font-bold text-base leading-none tracking-tight">{businessName}</p>
                     </div>
                 </div>
 

@@ -1,17 +1,19 @@
 import { motion } from 'framer-motion';
-import { Banknote, Smartphone, CreditCard } from 'lucide-react';
+import { Banknote, Smartphone } from 'lucide-react';
 
 const METHODS = [
     { key: 'efectivo', label: 'Efectivo', icon: Banknote, color: 'bg-emerald-500' },
     { key: 'qr', label: 'QR', icon: Smartphone, color: 'bg-indigo-500' },
-    { key: 'transferencia', label: 'Transferencia', icon: CreditCard, color: 'bg-slate-500' },
 ];
 
 export default function PaymentBreakdown({ orders }) {
     const total = orders.length || 1;
 
     const counts = Object.fromEntries(METHODS.map(m => [m.key, 0]));
-    orders.forEach(o => { if (counts[o.method] !== undefined) counts[o.method]++; });
+    orders.forEach(o => {
+        const key = String(o?.method || o?.payment_method || '').toLowerCase();
+        if (counts[key] !== undefined) counts[key]++;
+    });
 
     return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">

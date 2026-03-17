@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
@@ -15,6 +15,8 @@ export default function App() {
   const [view, setView] = useState('pos');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cart, setCart] = useLocalStorage('acai_cart', []);
+  const [businessName, setBusinessName] = useLocalStorage('acai_business_name', 'La Picana');
+  const [theme, setTheme] = useLocalStorage('acai_theme', 'light');
   
   const { 
     categories,
@@ -23,26 +25,36 @@ export default function App() {
     toppings,
     flavors,
     sales, 
+    settings,
     saveSale, 
+    deleteSale,
+    saveBusinessSettings,
     updateInventory,
     loading,
-    isConnected
+    isConnected,
+    refresh
   } = useData();
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
+  useEffect(() => {
+    const isDark = theme === 'dark';
+    document.documentElement.classList.toggle('dark', isDark);
+  }, [theme]);
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-500">
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
       {/* Navigation sidebar */}
       <Sidebar
+        businessName={businessName}
         view={view}
         setView={setView}
         cartCount={cartCount}
@@ -52,7 +64,13 @@ export default function App() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-h-screen lg:ml-60">
-        <TopBar view={view} onMenuClick={() => setSidebarOpen(true)} isConnected={isConnected} />
+        <TopBar
+          view={view}
+          businessName={businessName}
+          onMenuClick={() => setSidebarOpen(true)}
+          isConnected={isConnected}
+          onReconnect={refresh}
+        />
 
         <main className="flex-1 p-5 overflow-auto">
           <AnimatePresence mode="wait">
@@ -73,6 +91,8 @@ export default function App() {
                   toppings={toppings}
                   flavors={flavors}
                   onSaveSale={saveSale}
+                  businessName={businessName}
+                  settings={settings}
                 />
               )}
               {view === 'inventory' && (
@@ -86,6 +106,7 @@ export default function App() {
                   products={products}
                   categories={categories}
                   onManageExtras={() => setView('extras')}
+                  onRefresh={refresh}
                 />
               )}
               {view === 'extras' && (
@@ -96,12 +117,22 @@ export default function App() {
               {view === 'reports' && (
                 <ReportsPage 
                   sales={sales} 
+                  products={products}
+                  toppings={toppings}
+                  flavors={flavors}
+                  onDeleteSale={deleteSale}
+                  businessName={businessName}
+                  settings={settings}
                 />
               )}
               {view === 'settings' && (
                 <SettingsPage 
-                  toppings={toppings}
-                  flavors={flavors}
+                  businessName={businessName}
+                  setBusinessName={setBusinessName}
+                  theme={theme}
+                  setTheme={setTheme}
+                  settings={settings}
+                  onSaveSettings={saveBusinessSettings}
                 />
               )}
             </motion.div>

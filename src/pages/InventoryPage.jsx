@@ -82,8 +82,8 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
             {/* Page header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-slate-900 font-bold text-xl">Inventario</h2>
-                    <p className="text-slate-400 text-sm">Control de stock de insumos</p>
+                    <h2 className="text-slate-900 font-bold text-xl dark:text-slate-100">Inventario</h2>
+                    <p className="text-slate-400 text-sm dark:text-slate-400">Control de stock de insumos</p>
                 </div>
                 <button 
                     onClick={() => setIsAdding(true)}
@@ -97,9 +97,9 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
             {/* Summary strip */}
             <div className="grid grid-cols-3 gap-4">
                 {[
-                    { key: 'ok', label: 'Disponible', cls: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
-                    { key: 'warn', label: 'Stock Bajo', cls: 'bg-amber-50  border-amber-100  text-amber-700' },
-                    { key: 'critical', label: 'Crítico', cls: 'bg-red-50    border-red-100    text-red-700' },
+                    { key: 'ok', label: 'Disponible', cls: 'bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-900/60 dark:text-emerald-200' },
+                    { key: 'warn', label: 'Stock Bajo', cls: 'bg-amber-50 border-amber-100 text-amber-700 dark:bg-amber-950/30 dark:border-amber-900/60 dark:text-amber-200' },
+                    { key: 'critical', label: 'Crítico', cls: 'bg-red-50 border-red-100 text-red-700 dark:bg-red-950/30 dark:border-red-900/60 dark:text-red-200' },
                 ].map(({ key, label, cls }) => (
                     <div key={key} className={`rounded-xl border px-5 py-4 ${cls}`}>
                         <p className="font-bold text-3xl leading-none">{counts[key] || 0}</p>
@@ -109,18 +109,18 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden dark:bg-slate-900 dark:border-slate-800">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                        <thead className="bg-slate-50 border-b border-slate-200">
+                        <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-800">
                             <tr>
-                                <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">Insumo</th>
-                                <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">Cantidad</th>
-                                <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">Estado</th>
-                                <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4">Acciones</th>
+                                <th className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4 dark:text-slate-300">Insumo</th>
+                                <th className="text-right text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4 dark:text-slate-300">Cantidad</th>
+                                <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4 dark:text-slate-300">Estado</th>
+                                <th className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wider px-6 py-4 dark:text-slate-300">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             <AnimatePresence initial={false}>
                                 {inventory.map((item) => (
                                     <motion.tr
@@ -128,12 +128,12 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="hover:bg-slate-50/50 transition-colors"
+                                        className="hover:bg-slate-50/50 transition-colors dark:hover:bg-slate-800/50"
                                     >
-                                        <td className="px-6 py-4 font-medium text-slate-800">{item.name}</td>
+                                        <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <span className="font-bold text-slate-900">{item.quantity}</span>
-                                            <span className="text-slate-500 text-xs ml-1">{item.unit}</span>
+                                            <span className="font-bold text-slate-900 dark:text-slate-100">{item.quantity}</span>
+                                            <span className="text-slate-500 text-xs ml-1 dark:text-slate-400">{item.unit}</span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(getStatus(item))}`}>
@@ -150,28 +150,28 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                                                         onKeyDown={e => e.key === 'Enter' && commitAdjust(item.id)}
                                                         placeholder="±"
                                                         autoFocus
-                                                        className="w-20 border border-indigo-300 rounded-lg px-2 py-1 text-center text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                        className="w-20 border border-indigo-300 rounded-lg px-2 py-1 text-center text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-indigo-900/60"
                                                     />
-                                                    <button onClick={() => commitAdjust(item.id)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"><Save size={16} /></button>
-                                                    <button onClick={() => setAdjusting(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded"><X size={16} /></button>
+                                                    <button onClick={() => commitAdjust(item.id)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded dark:text-indigo-300 dark:hover:bg-indigo-950/30"><Save size={16} /></button>
+                                                    <button onClick={() => setAdjusting(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded dark:text-slate-400 dark:hover:bg-slate-800"><X size={16} /></button>
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button 
                                                         onClick={() => handleUpdate(item.id, Math.max(0, item.quantity - 1))}
-                                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors dark:text-slate-400 dark:hover:bg-red-950/30"
                                                     >
                                                         <Minus size={16} />
                                                     </button>
                                                     <button 
                                                         onClick={() => { setAdjusting(item.id); setAdjustVal(''); }}
-                                                        className="px-3 py-1 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                                                        className="px-3 py-1 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:border-indigo-300 hover:text-indigo-600 transition-colors dark:text-slate-200 dark:border-slate-700 dark:hover:border-indigo-900/60 dark:hover:text-indigo-300"
                                                     >
                                                         Ajustar
                                                     </button>
                                                     <button 
                                                         onClick={() => handleUpdate(item.id, item.quantity + 1)}
-                                                        className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                                        className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors dark:text-slate-400 dark:hover:bg-emerald-950/30"
                                                     >
                                                         <Plus size={16} />
                                                     </button>
@@ -184,7 +184,7 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                         </tbody>
                     </table>
                     {inventory.length === 0 && (
-                        <div className="p-8 text-center text-slate-400">
+                        <div className="p-8 text-center text-slate-400 dark:text-slate-400">
                             No hay items en el inventario.
                         </div>
                     )}
@@ -200,21 +200,21 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+                            className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 dark:bg-slate-900"
                         >
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="font-bold text-lg text-slate-900">Nuevo Insumo</h3>
-                                <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600">
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">Nuevo Insumo</h3>
+                                <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                                     <X size={20} />
                                 </button>
                             </div>
                             
                             <form onSubmit={handleCreate} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1 dark:text-slate-400">Nombre</label>
                                     <input 
                                         required 
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                         placeholder="Ej. Vasos 300ml"
                                         value={newItem.name}
                                         onChange={e => setNewItem({...newItem, name: e.target.value})}
@@ -222,18 +222,18 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad Inicial</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1 dark:text-slate-400">Cantidad Inicial</label>
                                         <input 
                                             required type="number"
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             value={newItem.quantity}
                                             onChange={e => setNewItem({...newItem, quantity: e.target.value})}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Unidad</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1 dark:text-slate-400">Unidad</label>
                                         <select 
-                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                             value={newItem.unit}
                                             onChange={e => setNewItem({...newItem, unit: e.target.value})}
                                         >
@@ -248,10 +248,10 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Stock Mínimo (Alerta)</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1 dark:text-slate-400">Stock Mínimo (Alerta)</label>
                                     <input 
                                         type="number"
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
                                         value={newItem.min_stock}
                                         onChange={e => setNewItem({...newItem, min_stock: e.target.value})}
                                     />
@@ -261,7 +261,7 @@ export default function InventoryPage({ inventory, onUpdateInventory }) {
                                     <button 
                                         type="button" 
                                         onClick={() => setIsAdding(false)}
-                                        className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
+                                        className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium dark:text-slate-200 dark:hover:bg-slate-800"
                                     >
                                         Cancelar
                                     </button>
