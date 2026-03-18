@@ -57,12 +57,16 @@ export const salesService = {
         return { ...sale, items: itemsToInsert };
     },
 
-    // GET /sales
+    // GET /sales with pagination
     getHistory: async (filters = {}) => {
+        const limit = filters.limit || 50;
+        const offset = filters.offset || 0;
+
         let query = supabase
             .from('sales')
             .select('*, sale_items(*)')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (filters.date) {
             // Filter by date range (start of day to end of day)

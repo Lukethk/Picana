@@ -7,6 +7,7 @@ import { flavorService } from '../services/flavorService';
 import { salesService } from '../services/salesService';
 import { inventoryService } from '../services/inventoryService';
 import { settingsService } from '../services/settingsService';
+import { expenseService } from '../services/expenseService';
 import { CUPS } from '../data/products';
 import { DEFAULT_INVENTORY } from '../data/inventory';
 
@@ -17,6 +18,8 @@ export function useData() {
     const [toppings, setToppings] = useState([]); 
     const [flavors, setFlavors] = useState([]); // Add flavors state
     const [sales, setSales] = useState([]);
+    const [hasMoreSales, setHasMoreSales] = useState(true);
+    const [expenses, setExpenses] = useState([]);
     const [settings, setSettings] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -91,30 +94,34 @@ export function useData() {
         setIsConnected(false);
     }, [normalizeSettings, readLocalSettings]);
 
-    const loadData = useCallback(async () => {
-        setLoading(true);
+    // Optimized data loading with local cache
+    const loadData = useCallback(async (isRefresh = false) => {
+        if (!isRefresh) setLoading(true);
+        
         try {
-            console.log("Iniciando carga de datos (Servicios)...");
-
-            // Health check via simple query - Retry mechanism or less strict check
-            const { error: healthCheck } = await supabase.from('categories').select('count', { count: 'exact', head: true });
-            
-            if (healthCheck) {
-                 console.warn("Health check failed, trying to reconnect...", healthCheck);
-                 // Optional: throw only if it's a network error, otherwise continue if it's just a permission error on one table
-                 // But for now, let's treat it as offline if categories fail.
-                 throw new Error(`Conexión fallida: ${healthCheck.message}`);
+            // Load from cache first for immediate UI
+            if (!isRefresh) {
+                const cachedCats = localStorage.getItem('cache_categories');
+                const cachedProds = localStorage.getItem('cache_products');
+                const cachedTops = localStorage.getItem('cache_toppings');
+                const cachedFlavs = localStorage.getItem('cache_flavors');
+                
+                if (cachedCats) setCategories(JSON.parse(cachedCats));
+                if (cachedProds) setProducts(JSON.parse(cachedProds));
+                if (cachedTops) setToppings(JSON.parse(cachedTops));
+                if (cachedFlavs) setFlavors(JSON.parse(cachedFlavs));
             }
-            
-            // Parallel fetch using services
-            const [cats, prods, inv, tops, flavs, hist, conf] = await Promise.all([
+
+            // Parallel fetch using services with a limit on history
+            const [cats, prods, inv, tops, flavs, hist, exps, conf] = await Promise.all([
                 productService.getCategories(),
                 productService.getAll(),
                 inventoryService.getAll(),
-                toppingService.getAll().catch(e => { console.warn('Toppings error', e); return []; }),
-                flavorService.getAll().catch(e => { console.warn('Flavors error', e); return []; }),
-                salesService.getHistory().catch(e => { console.warn('History error', e); return []; }),
-                settingsService.getSettings().catch(e => { console.warn('Settings error', e); return null; })
+                toppingService.getAll().catch(() => []),
+                flavorService.getAll().catch(() => []),
+                salesService.getHistory().catch(() => []), // This should ideally be limited in service
+                expenseService.getAll().catch(() => []),
+                settingsService.getSettings().catch(() => null)
             ]);
 
             setCategories(cats || []);
@@ -122,7 +129,14 @@ export function useData() {
             setInventory(inv || []);
             setToppings(tops || []);
             setFlavors(flavs || []);
+            setExpenses(exps || []);
             
+            // Update cache
+            localStorage.setItem('cache_categories', JSON.stringify(cats || []));
+            localStorage.setItem('cache_products', JSON.stringify(prods || []));
+            localStorage.setItem('cache_toppings', JSON.stringify(tops || []));
+            localStorage.setItem('cache_flavors', JSON.stringify(flavs || []));
+
             // Normalize Sales for UI
             const normalizedSales = (hist || []).map(s => ({
                 id: s.id,
@@ -136,20 +150,17 @@ export function useData() {
             }));
             setSales(normalizedSales);
 
-            {
-                const local = readLocalSettings();
-                const nextSettings = normalizeSettings(conf, local);
-                setSettings(nextSettings);
-                writeLocalSettings(nextSettings);
-            }
+            const local = readLocalSettings();
+            const nextSettings = normalizeSettings(conf, local);
+            setSettings(nextSettings);
+            writeLocalSettings(nextSettings);
 
             setError(null);
             setIsConnected(true);
-
         } catch (err) {
             console.error('Error cargando datos:', err);
             setError(err);
-            loadLocalData();
+            if (!isRefresh) loadLocalData();
         } finally {
             setLoading(false);
         }
@@ -277,6 +288,32 @@ export function useData() {
         if (!isConnected) localStorage.setItem('acai_inventory', JSON.stringify(newInv));
     };
 
+    const loadMoreSales = useCallback(async () => {
+        if (!isConnected || !hasMoreSales) return;
+        
+        try {
+            const offset = sales.length;
+            const more = await salesService.getHistory({ offset, limit: 50 });
+            
+            if (more.length < 50) setHasMoreSales(false);
+            
+            const normalized = more.map(s => ({
+                id: s.id,
+                date: new Date(s.created_at).toDateString(),
+                total: Number(s.total),
+                items: s.sale_items ? s.sale_items.reduce((acc, item) => acc + item.quantity, 0) : 0,
+                method: s.payment_method,
+                invoice_number: s.invoice_number,
+                ts: new Date(s.created_at).getTime(),
+                items_detail: s.sale_items
+            }));
+            
+            setSales(prev => [...prev, ...normalized]);
+        } catch (err) {
+            console.error('Error loading more sales:', err);
+        }
+    }, [isConnected, hasMoreSales, sales.length]);
+
     // Initial load
     useEffect(() => {
         loadData();
@@ -289,6 +326,9 @@ export function useData() {
         toppings,
         flavors,
         sales,
+        hasMoreSales,
+        loadMoreSales,
+        expenses,
         settings,
         loading,
         error,
@@ -297,6 +337,6 @@ export function useData() {
         deleteSale,
         saveBusinessSettings,
         updateInventory,
-        refresh: loadData
+        refresh: () => loadData(true)
     };
 }

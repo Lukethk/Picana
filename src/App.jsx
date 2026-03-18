@@ -9,9 +9,11 @@ import MenuPage from './pages/MenuPage';
 import SettingsPage from './pages/SettingsPage';
 import ExtrasPage from './pages/ExtrasPage';
 import LoginPage from './pages/LoginPage';
+import ExpensesPage from './pages/ExpensesPage';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useData } from './hooks/useData';
 import { authService } from './services/authService';
+import CashControl from './components/layout/CashControl';
 
 export default function App() {
   const [view, setView] = useState('pos');
@@ -21,6 +23,7 @@ export default function App() {
   const [theme, setTheme] = useLocalStorage('acai_theme', 'light');
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [currentShift, setCurrentShift] = useState(null);
   
   const { 
     categories,
@@ -29,6 +32,9 @@ export default function App() {
     toppings,
     flavors,
     sales, 
+    hasMoreSales,
+    loadMoreSales,
+    expenses,
     settings,
     saveSale, 
     deleteSale,
@@ -99,6 +105,8 @@ export default function App() {
           onReconnect={refresh}
         />
 
+        <CashControl onShiftChange={setCurrentShift} />
+
         <main className="flex-1 p-5 overflow-auto">
           <AnimatePresence mode="wait">
             <motion.div
@@ -120,6 +128,7 @@ export default function App() {
                   onSaveSale={saveSale}
                   businessName={businessName}
                   settings={settings}
+                  currentShift={currentShift}
                 />
               )}
               {view === 'inventory' && (
@@ -127,6 +136,9 @@ export default function App() {
                   inventory={inventory} 
                   onUpdateInventory={updateInventory} 
                 />
+              )}
+              {view === 'expenses' && (
+                <ExpensesPage />
               )}
               {view === 'menu' && (
                 <MenuPage 
@@ -144,6 +156,9 @@ export default function App() {
               {view === 'reports' && (
                 <ReportsPage 
                   sales={sales} 
+                  hasMoreSales={hasMoreSales}
+                  onLoadMoreSales={loadMoreSales}
+                  expenses={expenses}
                   products={products}
                   toppings={toppings}
                   flavors={flavors}

@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { TrendingUp, ShoppingBag, UtensilsCrossed, Sparkles, IceCreamCone, FileText, Search, Trash2, X, Loader2, Printer, Download } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, UtensilsCrossed, Sparkles, IceCreamCone, FileText, Search, Trash2, X, Loader2, Printer, Download, HelpCircle } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import BarChart from '../components/reports/BarChart';
 import PaymentBreakdown from '../components/reports/PaymentBreakdown';
 import { formatBs } from '../utils/format';
 import { buildReceiptText } from '../utils/receipt';
+import Tooltip from '../components/ui/Tooltip';
 
-export default function ReportsPage({ sales = [], products = [], toppings = [], flavors = [], onDeleteSale, businessName, settings }) {
+export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales, expenses = [], products = [], toppings = [], flavors = [], onDeleteSale, businessName, settings }) {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [searchTerm, setSearchTerm] = useState('');
     const [saleToDelete, setSaleToDelete] = useState(null);
@@ -92,7 +93,17 @@ export default function ReportsPage({ sales = [], products = [], toppings = [], 
         });
     }, [orders, periodRange]);
 
+    const periodExpenses = useMemo(() => {
+        const { start, end } = periodRange;
+        return (expenses || []).filter(e => {
+            const d = e?.created_at ? new Date(e.created_at) : new Date(Number(e?.ts) || 0);
+            return d >= start && d < end;
+        });
+    }, [expenses, periodRange]);
+
     const totalSales = useMemo(() => periodOrders.reduce((s, o) => s + (Number(o?.total) || 0), 0), [periodOrders]);
+    const totalExpenses = useMemo(() => periodExpenses.reduce((s, e) => s + (Number(e?.amount) || 0), 0), [periodExpenses]);
+    const netProfit = totalSales - totalExpenses;
     const totalOrders = periodOrders.length;
     
     const productById = Object.fromEntries((products || []).map(p => [String(p.id), p]));
@@ -301,7 +312,10 @@ export default function ReportsPage({ sales = [], products = [], toppings = [], 
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
                         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                             <div>
-                                <h3 className="text-slate-800 font-semibold text-sm">Filtro de reportes</h3>
+                                <div className="flex items-center gap-1.5">
+                                    <h3 className="text-slate-800 font-semibold text-sm">Filtro de reportes</h3>
+                                    <Tooltip position="bottom" text="Filtra las estadísticas por día, semana o mes para ver el rendimiento detallado." />
+                                </div>
                                 <p className="text-slate-500 text-xs">{periodUi.label}</p>
                             </div>
 
@@ -471,41 +485,37 @@ export default function ReportsPage({ sales = [], products = [], toppings = [], 
                     </div>
 
                     {/* KPI row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         <StatCard
                             label={periodUi.statLabel}
                             value={formatBs(totalSales)}
                             icon={TrendingUp}
                             accent="indigo"
-                            sub={`${totalOrders} pedido${totalOrders !== 1 ? 's' : ''}`}
+                            sub={`${periodOrders.length} pedido${periodOrders.length !== 1 ? 's' : ''}`}
                         />
                         <StatCard
-                            label="Pedidos totales"
-                            value={totalOrders}
-                            icon={ShoppingBag}
-                            accent="emerald"
-                            sub={`Completados — ${periodUi.label}`}
-                        />
-                        <StatCard
-                            label="Producto más vendido"
-                            value={todayStats.topProduct?.name || '-'}
-                            icon={UtensilsCrossed}
-                            accent="amber"
-                            sub={todayStats.topProduct ? `${todayStats.topProduct.count} uds.` : 'Sin datos en el periodo'}
-                        />
-                        <StatCard
-                            label="Topping más pedido"
-                            value={todayStats.topTopping?.name || '-'}
-                            icon={Sparkles}
+                            label="Gastos del periodo"
+                            value={formatBs(totalExpenses)}
+                            icon={TrendingDown}
                             accent="rose"
-                            sub={todayStats.topTopping ? `${todayStats.topTopping.count} selecciones` : 'Sin datos en el periodo'}
+                            sub={`${periodExpenses.length} registro${periodExpenses.length !== 1 ? 's' : ''}`}
                         />
                         <StatCard
-                            label="Sabor más pedido"
-                            value={todayStats.topFlavor?.name || '-'}
-                            icon={IceCreamCone}
-                            accent="indigo"
-                            sub={todayStats.topFlavor ? `${todayStats.topFlavor.count} selecciones` : 'Sin datos en el periodo'}
+                            label="Utilidad Real"
+                            value={formatBs(netProfit)}
+                            icon={DollarSign}
+                            accent={netProfit >= 0 ? 'emerald' : 'rose'}
+                            sub={netProfit >= 0 ? 'Ganancia neta' : 'Pérdida en el periodo'}
+                        />
+                        <Tooltip text="La utilidad real se calcula restando los Gastos del total de Ventas.">
+                            <HelpCircle size={14} className="text-slate-400" />
+                        </Tooltip>
+                        <StatCard
+                            label="Ticket Promedio"
+                            value={formatBs(periodOrders.length ? totalSales / periodOrders.length : 0)}
+                            icon={ShoppingBag}
+                            accent="amber"
+                            sub="Promedio por venta"
                         />
                     </div>
 
@@ -607,6 +617,17 @@ export default function ReportsPage({ sales = [], products = [], toppings = [], 
                             </tbody>
                         </table>
                     </div>
+
+                    {activeTab === 'history' && hasMoreSales && (
+                        <div className="p-4 border-t border-slate-100 bg-slate-50/30 flex justify-center">
+                            <button 
+                                onClick={onLoadMoreSales}
+                                className="px-6 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
+                            >
+                                Cargar más ventas
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -6,13 +6,15 @@ import {
     UtensilsCrossed,
     Settings,
     LogOut,
-    User
+    User,
+    Wallet
 } from 'lucide-react';
 import { authService } from '../../services/authService';
 
 const NAV = [
     { id: 'pos', label: 'Ventas', icon: ShoppingCart },
     { id: 'inventory', label: 'Inventario', icon: Package },
+    { id: 'expenses', label: 'Gastos', icon: Wallet },
     { id: 'menu', label: 'Menú & Productos', icon: UtensilsCrossed },
     { id: 'reports', label: 'Reportes', icon: BarChart3 },
     { id: 'settings', label: 'Configuración', icon: Settings },

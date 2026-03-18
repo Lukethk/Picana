@@ -1,11 +1,12 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle, Edit3, Loader2, Printer, X } from 'lucide-react';
+import { CheckCircle, Edit3, Loader2, Printer, X, Lock, HelpCircle } from 'lucide-react';
 import ProductCard from '../components/pos/ProductCard';
 import Cart from '../components/pos/Cart';
 import ProductOptionsModal from '../components/pos/ProductOptionsModal';
 import { formatBs } from '../utils/format';
 import { buildReceiptText } from '../utils/receipt';
+import Tooltip from '../components/ui/Tooltip';
 
 const CONTAINER_VARIANTS = {
     hidden: { opacity: 0 },
@@ -22,7 +23,7 @@ const ITEM_VARIANTS = {
     show: { opacity: 1, y: 0 }
 };
 
-export default function POSPage({ cart, setCart, products, categories, toppings, flavors, onSaveSale, businessName, settings }) {
+export default function POSPage({ cart, setCart, products, categories, toppings, flavors, onSaveSale, businessName, settings, currentShift }) {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [toastMsg, setToastMsg] = useState(false);
@@ -182,11 +183,29 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
 
     return (
         <div className="flex gap-5 h-full relative">
+            {/* Cash Shift Lock Overlay */}
+            {!currentShift && (
+                <div className="absolute inset-0 z-40 bg-slate-50/60 dark:bg-slate-950/60 backdrop-blur-[1px] flex items-center justify-center rounded-2xl">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 text-center max-w-sm mx-auto">
+                        <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Lock size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Ventas Bloqueadas</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+                            Debes **abrir el turno de caja** en la parte superior antes de poder realizar ventas.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Left — product grid */}
             <div className="flex-1 min-w-0 flex flex-col h-full">
                 {/* Header with Categories */}
                 <div className="mb-4 shrink-0">
-                    <h2 className="text-slate-900 font-bold text-xl mb-3 dark:text-slate-100">Menú</h2>
+                    <div className="flex items-center gap-2 mb-3">
+                        <h2 className="text-slate-900 font-bold text-xl dark:text-slate-100">Menú</h2>
+                        <Tooltip position="bottom" text="Selecciona una categoría para filtrar productos o usa 'Todos' para ver el catálogo completo." />
+                    </div>
                     
                     {/* Categories Tabs */}
                     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar mask-gradient-right">
@@ -294,13 +313,12 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
     );
 }
 
-const ProductGrid = memo(function ProductGrid({ displayedProducts, selectedCategory, onSelect }) {
+const ProductGrid = memo(function ProductGrid({ displayedProducts, onSelect }) {
     return (
         <motion.div 
             variants={CONTAINER_VARIANTS}
             initial="hidden"
             animate="show"
-            key={selectedCategory}
             className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20"
         >
             {displayedProducts.length > 0 ? (
