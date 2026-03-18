@@ -32,13 +32,14 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
 
     // Initialize category selection when categories load
     useEffect(() => {
-        if (!selectedCategory && categories && categories.length > 0) {
-            queueMicrotask(() => setSelectedCategory(categories[0].id));
+        if (selectedCategory === null && categories && categories.length > 0) {
+            queueMicrotask(() => setSelectedCategory('all'));
         }
     }, [categories, selectedCategory]);
 
     const displayedProducts = useMemo(() => {
-        if (!selectedCategory || !products) return [];
+        if (!products) return [];
+        if (selectedCategory === 'all') return products;
         return products.filter(p => p.category_id === selectedCategory);
     }, [products, selectedCategory]);
 
@@ -190,20 +191,33 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
                     {/* Categories Tabs */}
                     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar mask-gradient-right">
                         {categories && categories.length > 0 ? (
-                            categories.map(cat => (
+                            <>
                                 <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedCategory(cat.id)}
+                                    onClick={() => setSelectedCategory('all')}
                                     className={`
                                         px-5 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-200
-                                        ${selectedCategory === cat.id 
+                                        ${selectedCategory === 'all' 
                                             ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-105 dark:bg-indigo-600 dark:shadow-indigo-500/20' 
                                             : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:border-slate-800'}
                                     `}
                                 >
-                                    {cat.name}
+                                    Todos
                                 </button>
-                            ))
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedCategory(cat.id)}
+                                        className={`
+                                            px-5 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-200
+                                            ${selectedCategory === cat.id 
+                                                ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-105 dark:bg-indigo-600 dark:shadow-indigo-500/20' 
+                                                : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:border-slate-800'}
+                                        `}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </>
                         ) : (
                             <p className="text-sm text-slate-400">Sin categorías</p>
                         )}
@@ -317,13 +331,13 @@ function CheckoutSummaryModal({ cart, paymentMethod, confirming, receiptText, pr
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={confirming ? undefined : onClose} />
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={confirming ? undefined : onClose} />
             <motion.div
                 initial={{ opacity: 0, scale: 0.98, y: 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: 8 }}
-                transition={{ duration: 0.14 }}
-                className="relative bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] dark:bg-slate-900 dark:border dark:border-slate-800"
+                transition={{ duration: 0.12, ease: [0.23, 1, 0.32, 1] }}
+                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] dark:bg-slate-900 dark:border dark:border-slate-800"
             >
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/40 dark:border-slate-800">
                     <div>

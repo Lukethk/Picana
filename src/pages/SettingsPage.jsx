@@ -1,12 +1,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Loader2, Moon, Printer, Save, Store, Sun } from 'lucide-react';
+import { FileText, Loader2, Moon, Printer, Save, Store, Sun, Lock, CheckCircle2 } from 'lucide-react';
 import { buildReceiptText } from '../utils/receipt';
+import { authService } from '../services/authService';
 
 
 export default function SettingsPage({ businessName, setBusinessName, theme, setTheme, settings, onSaveSettings }) {
     const isDark = theme === 'dark';
     const [saving, setSaving] = useState(false);
+    const [passwords, setPasswords] = useState({ new: '', confirm: '' });
+    const [passSaving, setPassSaving] = useState(false);
+    const [passStatus, setPassStatus] = useState(null); // { type: 'success' | 'error', msg: string }
 
     const defaults = useMemo(() => ({
         printer_config: {
@@ -98,6 +102,30 @@ export default function SettingsPage({ businessName, setBusinessName, theme, set
         }
     };
 
+    const handlePasswordUpdate = async (e) => {
+        e.preventDefault();
+        if (passwords.new !== passwords.confirm) {
+            setPassStatus({ type: 'error', msg: 'Las contraseñas no coinciden' });
+            return;
+        }
+        if (passwords.new.length < 6) {
+            setPassStatus({ type: 'error', msg: 'Mínimo 6 caracteres' });
+            return;
+        }
+
+        setPassSaving(true);
+        setPassStatus(null);
+        try {
+            await authService.updatePassword(passwords.new);
+            setPassStatus({ type: 'success', msg: 'Contraseña actualizada' });
+            setPasswords({ new: '', confirm: '' });
+        } catch (err) {
+            setPassStatus({ type: 'error', msg: err.message || 'Error al actualizar' });
+        } finally {
+            setPassSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -174,6 +202,61 @@ export default function SettingsPage({ businessName, setBusinessName, theme, set
                             />
                         </button>
                     </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 dark:bg-slate-900 dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center border border-red-100 dark:bg-red-950/40 dark:border-red-900/60">
+                            <Lock size={18} className="text-red-600 dark:text-red-300" />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="text-slate-900 font-bold text-sm dark:text-slate-100">Seguridad</h3>
+                            <p className="text-slate-500 text-xs dark:text-slate-400">Cambiar contraseña de acceso</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handlePasswordUpdate} className="mt-5 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 dark:text-slate-400">Nueva contraseña</label>
+                                <input
+                                    required
+                                    type="password"
+                                    className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    value={passwords.new}
+                                    onChange={e => setPasswords({ ...passwords, new: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 dark:text-slate-400">Confirmar</label>
+                                <input
+                                    required
+                                    type="password"
+                                    className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100"
+                                    value={passwords.confirm}
+                                    onChange={e => setPasswords({ ...passwords, confirm: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between gap-3 pt-1">
+                            <div className="min-w-0">
+                                {passStatus && (
+                                    <p className={`text-[11px] font-bold flex items-center gap-1 ${passStatus.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {passStatus.type === 'success' && <CheckCircle2 size={12} />}
+                                        {passStatus.msg}
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                disabled={passSaving}
+                                className="px-4 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {passSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                                Actualizar
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 

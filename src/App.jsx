@@ -8,8 +8,10 @@ import ReportsPage from './pages/ReportsPage';
 import MenuPage from './pages/MenuPage';
 import SettingsPage from './pages/SettingsPage';
 import ExtrasPage from './pages/ExtrasPage';
+import LoginPage from './pages/LoginPage';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useData } from './hooks/useData';
+import { authService } from './services/authService';
 
 export default function App() {
   const [view, setView] = useState('pos');
@@ -17,6 +19,8 @@ export default function App() {
   const [cart, setCart] = useLocalStorage('acai_cart', []);
   const [businessName, setBusinessName] = useLocalStorage('acai_business_name', 'La Picana');
   const [theme, setTheme] = useLocalStorage('acai_theme', 'light');
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   
   const { 
     categories,
@@ -30,10 +34,25 @@ export default function App() {
     deleteSale,
     saveBusinessSettings,
     updateInventory,
-    loading,
+    loading: dataLoading,
     isConnected,
     refresh
   } = useData();
+
+  useEffect(() => {
+    // Check initial session
+    authService.getSession().then(s => {
+      setSession(s);
+      setAuthLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = authService.onAuthStateChange((newSession) => {
+      setSession(newSession);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
@@ -42,12 +61,19 @@ export default function App() {
     document.documentElement.classList.toggle('dark', isDark);
   }, [theme]);
 
-  if (loading) {
+  if (authLoading || (session && dataLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+          <p className="text-sm font-medium animate-pulse">Cargando sistema...</p>
+        </div>
       </div>
     );
+  }
+
+  if (!session) {
+    return <LoginPage />;
   }
 
   return (
@@ -60,6 +86,7 @@ export default function App() {
         cartCount={cartCount}
         open={sidebarOpen}
         setOpen={setSidebarOpen}
+        user={session?.user}
       />
 
       {/* Main area */}

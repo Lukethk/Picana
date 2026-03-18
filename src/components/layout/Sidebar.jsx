@@ -4,8 +4,11 @@ import {
     Package,
     BarChart3,
     UtensilsCrossed,
-    Settings
+    Settings,
+    LogOut,
+    User
 } from 'lucide-react';
+import { authService } from '../../services/authService';
 
 const NAV = [
     { id: 'pos', label: 'Ventas', icon: ShoppingCart },
@@ -15,7 +18,13 @@ const NAV = [
     { id: 'settings', label: 'Configuración', icon: Settings },
 ];
 
-export default function Sidebar({ businessName, view, setView, cartCount, open, setOpen }) {
+export default function Sidebar({ businessName, view, setView, cartCount, open, setOpen, user }) {
+    const handleLogout = async () => {
+        if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+            await authService.logout();
+        }
+    };
+
     return (
         <>
             {/* Mobile overlay */}
@@ -82,12 +91,34 @@ export default function Sidebar({ businessName, view, setView, cartCount, open, 
                     })}
                 </nav>
 
+                {/* User & Logout */}
+                <div className="px-3 py-4 border-t border-slate-700/60 space-y-2">
+                    {user && (
+                        <div className="flex items-center gap-3 px-3 py-2 text-slate-300">
+                            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                                <User size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{user.email?.split('@')[0]}</p>
+                                <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                            </div>
+                        </div>
+                    )}
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-900/20 hover:text-red-400 transition-all duration-150"
+                    >
+                        <LogOut size={16} />
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
+
                 {/* Footer */}
-                <div className="px-5 py-4 border-t border-slate-700/60">
-                    <p className="text-slate-500 text-xs">Santa Cruz, Bolivia</p>
-                    <p className="text-slate-600 text-xs">v2.0.0</p>
+                <div className="px-5 py-2 border-t border-slate-700/60 bg-slate-950/40">
+                    <p className="text-slate-600 text-[10px]">Santa Cruz, Bolivia · v2.1.0</p>
                 </div>
             </aside>
         </>
     );
 }
+
