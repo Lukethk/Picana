@@ -88,15 +88,15 @@ export default function ProductOptionsModal({ product, availableToppings = [], a
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.97, y: 10 }}
                 transition={{ duration: 0.1, ease: [0.23, 1, 0.32, 1] }}
-                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                className="relative glass dark:glass-dark rounded-2xl premium-shadow dark:premium-shadow-dark w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                <div className="px-6 py-4 border-b border-slate-100/50 dark:border-slate-800/50 flex justify-between items-center bg-transparent">
                     <div>
-                        <h3 className="font-bold text-lg text-slate-800">Personalizar {product.name}</h3>
-                        <p className="text-slate-500 text-xs">Elige tus sabores y agregados</p>
+                        <h3 className="font-bold text-lg text-slate-800 dark:text-white">Personalizar {product.name}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-xs">Elige tus sabores y agregados</p>
                     </div>
-                    <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
+                    <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -108,7 +108,7 @@ export default function ProductOptionsModal({ product, availableToppings = [], a
                     {showFlavors && (
                         <div>
                             <div className="flex justify-between items-center mb-3">
-                                <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                                <h4 className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                     <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
                                     Sabores
                                     {maxFlavors !== -1 && (
@@ -151,7 +151,7 @@ export default function ProductOptionsModal({ product, availableToppings = [], a
 
                     {/* Toppings Section */}
                     <div>
-                        <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <h4 className="font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                             <span className="w-1 h-4 bg-pink-500 rounded-full"></span>
                             Toppings & Extras
                         </h4>
@@ -171,10 +171,10 @@ export default function ProductOptionsModal({ product, availableToppings = [], a
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                <div className="p-4 border-t border-slate-100/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
                     <div className="flex flex-col">
-                        <span className="text-xs text-slate-500 font-semibold uppercase">Total</span>
-                        <span className="text-xl font-bold text-slate-900">{formatBs(total)}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Total</span>
+                        <span className="text-xl font-bold text-slate-900 dark:text-white">{formatBs(total)}</span>
                     </div>
                     <button 
                         onClick={() => onConfirm(product, { flavors: selectedFlavors, toppings: selectedToppings })}

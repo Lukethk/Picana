@@ -441,7 +441,7 @@ function ProductModal({ product, categories, onClose, onSave, isSaving }) {
                         Cancelar
                     </button>
                     <button 
-                        onClick={handleSubmit}
+                        type="submit"
                         disabled={isSaving || uploading}
                         className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md shadow-indigo-200 transition-all flex items-center gap-2 disabled:opacity-70"
                     >

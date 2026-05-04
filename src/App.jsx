@@ -82,6 +82,11 @@ export default function App() {
     return <LoginPage />;
   }
 
+  // Role Based Access Control (RBAC)
+  // By default, if no role is explicitly set to 'cashier', we assume admin so we don't lock out the owner accidentally.
+  const isCashier = session.user?.user_metadata?.role === 'cashier';
+  const isAdmin = !isCashier;
+
   return (
     <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
       {/* Navigation sidebar */}
@@ -92,7 +97,8 @@ export default function App() {
         cartCount={cartCount}
         open={sidebarOpen}
         setOpen={setSidebarOpen}
-        user={session?.user}
+        user={session.user}
+        isAdmin={isAdmin}
       />
 
       {/* Main area */}
@@ -137,10 +143,10 @@ export default function App() {
                   onUpdateInventory={updateInventory} 
                 />
               )}
-              {view === 'expenses' && (
+              {view === 'expenses' && isAdmin && (
                 <ExpensesPage />
               )}
-              {view === 'menu' && (
+              {view === 'menu' && isAdmin && (
                 <MenuPage 
                   products={products}
                   categories={categories}
@@ -148,12 +154,12 @@ export default function App() {
                   onRefresh={refresh}
                 />
               )}
-              {view === 'extras' && (
+              {view === 'extras' && isAdmin && (
                 <ExtrasPage 
                   onBack={() => setView('menu')}
                 />
               )}
-              {view === 'reports' && (
+              {view === 'reports' && isAdmin && (
                 <ReportsPage 
                   sales={sales} 
                   hasMoreSales={hasMoreSales}
@@ -167,7 +173,7 @@ export default function App() {
                   settings={settings}
                 />
               )}
-              {view === 'settings' && (
+              {view === 'settings' && isAdmin && (
                 <SettingsPage 
                   businessName={businessName}
                   setBusinessName={setBusinessName}
@@ -176,6 +182,17 @@ export default function App() {
                   settings={settings}
                   onSaveSettings={saveBusinessSettings}
                 />
+              )}
+              {/* Fallback Unauthorized */}
+              {!isAdmin && ['expenses', 'menu', 'extras', 'reports', 'settings'].includes(view) && (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                      <div className="w-16 h-16 mb-4 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                          <span className="text-2xl">🔒</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">Acceso Restringido</h3>
+                      <p>Tu rol de Cajero no permite ver esta sección.</p>
+                      <button onClick={() => setView('pos')} className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg">Volver al POS</button>
+                  </div>
               )}
             </motion.div>
           </AnimatePresence>

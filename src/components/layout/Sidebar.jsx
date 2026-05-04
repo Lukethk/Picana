@@ -20,7 +20,7 @@ const NAV = [
     { id: 'settings', label: 'Configuración', icon: Settings },
 ];
 
-export default function Sidebar({ businessName, view, setView, cartCount, open, setOpen, user }) {
+export default function Sidebar({ businessName, view, setView, cartCount, open, setOpen, user, isAdmin = true }) {
     const handleLogout = async () => {
         if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
             await authService.logout();
@@ -45,7 +45,7 @@ export default function Sidebar({ businessName, view, setView, cartCount, open, 
             <aside
                 className={`
           fixed left-0 top-0 h-full w-60 z-30 flex flex-col
-          bg-slate-900 shadow-xl
+          bg-slate-900/80 backdrop-blur-xl border-r border-slate-700/50 shadow-2xl
           transition-transform duration-300
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
@@ -65,7 +65,10 @@ export default function Sidebar({ businessName, view, setView, cartCount, open, 
                     <p className="text-slate-500 text-xs font-semibold uppercase tracking-widest px-2 mb-3">
                         Menu principal
                     </p>
-                    {NAV.map(({ id, label, icon: Icon }) => {
+                    {NAV.filter(item => {
+                        if (!isAdmin && ['expenses', 'menu', 'reports', 'settings'].includes(item.id)) return false;
+                        return true;
+                    }).map(({ id, label, icon: Icon }) => {
                         const active = view === id;
                         return (
                             <button

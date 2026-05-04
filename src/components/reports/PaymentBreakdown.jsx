@@ -16,8 +16,8 @@ export default function PaymentBreakdown({ orders }) {
     });
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-            <h3 className="text-slate-800 font-semibold text-sm mb-4">Metodos de Pago</h3>
+        <div className="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-5 dark:glass-dark h-full">
+            <h3 className="text-slate-800 dark:text-slate-100 font-bold text-sm mb-5">Metodos de Pago</h3>
             <div className="space-y-4">
                 {METHODS.map(({ key, label, icon: Icon, color }) => {
                     const count = counts[key];

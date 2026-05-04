@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle, Edit3, Loader2, Printer, X, Lock, HelpCircle } from 'lucide-react';
+import { CheckCircle, Edit3, Loader2, Printer, Search, X, Lock } from 'lucide-react';
 import ProductCard from '../components/pos/ProductCard';
 import Cart from '../components/pos/Cart';
 import ProductOptionsModal from '../components/pos/ProductOptionsModal';
@@ -25,11 +25,14 @@ const ITEM_VARIANTS = {
 
 export default function POSPage({ cart, setCart, products, categories, toppings, flavors, onSaveSale, businessName, settings, currentShift }) {
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('efectivo');
     const [toastMsg, setToastMsg] = useState(false);
     const [selectedProductForOptions, setSelectedProductForOptions] = useState(null);
     const [checkoutOpen, setCheckoutOpen] = useState(false);
     const [confirming, setConfirming] = useState(false);
+    const [customerName, setCustomerName] = useState('');
+    const [customerDocument, setCustomerDocument] = useState('');
 
     // Initialize category selection when categories load
     useEffect(() => {
@@ -38,11 +41,27 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
         }
     }, [categories, selectedCategory]);
 
+    // Escape key to close modals
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (checkoutOpen && !confirming) setCheckoutOpen(false);
+                else if (selectedProductForOptions) setSelectedProductForOptions(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [checkoutOpen, confirming, selectedProductForOptions]);
+
     const displayedProducts = useMemo(() => {
         if (!products) return [];
-        if (selectedCategory === 'all') return products;
-        return products.filter(p => p.category_id === selectedCategory);
-    }, [products, selectedCategory]);
+        let list = selectedCategory === 'all' ? products : products.filter(p => p.category_id === selectedCategory);
+        if (searchTerm.trim()) {
+            const q = searchTerm.toLowerCase();
+            list = list.filter(p => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+        }
+        return list;
+    }, [products, selectedCategory, searchTerm]);
 
     /* ── Cart operations ─────────────────────────────────────── */
     const addToCart = useCallback((product, options) => {
@@ -108,15 +127,20 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
             total: subtotal,
             items: items.length,
             method: paymentMethod,
-            cartItems: items
+            cartItems: items,
+            customerName,
+            customerDocument
         });
 
         setCart([]);
         localStorage.removeItem('acai_cart');
+        setCustomerName('');
+        setCustomerDocument('');
+        setPaymentMethod('efectivo');
         setToastMsg(true);
         setTimeout(() => setToastMsg(false), 3000);
         return saved;
-    }, [cart, onSaveSale, paymentMethod, setCart]);
+    }, [cart, onSaveSale, paymentMethod, setCart, customerName, customerDocument]);
 
     const openCheckout = useCallback(() => {
         if (cart.length === 0) return;
@@ -134,8 +158,10 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
             paymentMethod,
             createdAt: new Date(),
             cartItems: cart,
+            customerName,
+            customerDocument
         });
-    }, [businessName, cart, paymentMethod, settings]);
+    }, [businessName, cart, paymentMethod, settings, customerName, customerDocument]);
 
     const printerConfig = settings?.printer_config ?? settings?.config?.printer_config;
     const printerEnabled = !!printerConfig?.enabled;
@@ -174,12 +200,14 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
                 paymentMethod,
                 createdAt,
                 cartItems: snapshot,
+                customerName,
+                customerDocument
             });
             printReceiptText(text);
         } finally {
             setConfirming(false);
         }
-    }, [businessName, cart, confirming, finalizeOrder, paymentMethod, printerEnabled, printerMode, settings]);
+    }, [businessName, cart, confirming, finalizeOrder, paymentMethod, printerEnabled, printerMode, settings, customerName, customerDocument]);
 
     return (
         <div className="flex gap-5 h-full relative">
@@ -192,7 +220,7 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
                         </div>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Ventas Bloqueadas</h3>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                            Debes **abrir el turno de caja** en la parte superior antes de poder realizar ventas.
+                            Debes <strong>abrir el turno de caja</strong> en la parte superior antes de poder realizar ventas.
                         </p>
                     </div>
                 </div>
@@ -206,40 +234,63 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
                         <h2 className="text-slate-900 font-bold text-xl dark:text-slate-100">Menú</h2>
                         <Tooltip position="bottom" text="Selecciona una categoría para filtrar productos o usa 'Todos' para ver el catálogo completo." />
                     </div>
-                    
-                    {/* Categories Tabs */}
-                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar mask-gradient-right">
-                        {categories && categories.length > 0 ? (
-                            <>
+
+                    {/* Search + Categories */}
+                    <div className="flex flex-col gap-2">
+                        {/* Search bar */}
+                        <div className="relative">
+                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <input
+                                type="text"
+                                placeholder="Buscar producto..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-9 py-2 text-sm bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
+                            />
+                            {searchTerm && (
                                 <button
-                                    onClick={() => setSelectedCategory('all')}
-                                    className={`
-                                        px-5 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-200
-                                        ${selectedCategory === 'all' 
-                                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-105 dark:bg-indigo-600 dark:shadow-indigo-500/20' 
-                                            : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:border-slate-800'}
-                                    `}
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                                 >
-                                    Todos
+                                    <X size={14} />
                                 </button>
-                                {categories.map(cat => (
+                            )}
+                        </div>
+
+                        {/* Categories Tabs */}
+                        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar mask-gradient-right">
+                            {categories && categories.length > 0 ? (
+                                <>
                                     <button
-                                        key={cat.id}
-                                        onClick={() => setSelectedCategory(cat.id)}
+                                        onClick={() => setSelectedCategory('all')}
                                         className={`
                                             px-5 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-200
-                                            ${selectedCategory === cat.id 
+                                            ${selectedCategory === 'all' 
                                                 ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-105 dark:bg-indigo-600 dark:shadow-indigo-500/20' 
                                                 : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:border-slate-800'}
                                         `}
                                     >
-                                        {cat.name}
+                                        Todos
                                     </button>
-                                ))}
-                            </>
-                        ) : (
-                            <p className="text-sm text-slate-400">Sin categorías</p>
-                        )}
+                                    {categories.map(cat => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setSelectedCategory(cat.id)}
+                                            className={`
+                                                px-5 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all duration-200
+                                                ${selectedCategory === cat.id 
+                                                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 scale-105 dark:bg-indigo-600 dark:shadow-indigo-500/20' 
+                                                    : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 border border-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:border-slate-800'}
+                                            `}
+                                        >
+                                            {cat.name}
+                                        </button>
+                                    ))}
+                                </>
+                            ) : (
+                                <p className="text-sm text-slate-400">Sin categorías</p>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -253,8 +304,8 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
                 </div>
             </div>
 
-            {/* Right — Cart (Fixed width on desktop, modal/drawer on mobile potentially) */}
-            <div className="w-[380px] shrink-0 h-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-800">
+            {/* Right — Cart */}
+            <div className="w-[320px] xl:w-[380px] shrink-0 h-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex flex-col dark:bg-slate-900 dark:border-slate-800">
                 <Cart
                     cart={cart}
                     onRemove={removeItem}
@@ -278,6 +329,10 @@ export default function POSPage({ cart, setCart, products, categories, toppings,
                         onEdit={() => setCheckoutOpen(false)}
                         onConfirmOnly={confirmCheckoutOnly}
                         onConfirmAndPrint={confirmCheckoutAndPrint}
+                        customerName={customerName}
+                        setCustomerName={setCustomerName}
+                        customerDocument={customerDocument}
+                        setCustomerDocument={setCustomerDocument}
                     />
                 )}
             </AnimatePresence>
@@ -343,7 +398,7 @@ const ProductGrid = memo(function ProductGrid({ displayedProducts, onSelect }) {
     );
 });
 
-function CheckoutSummaryModal({ cart, paymentMethod, confirming, receiptText, printerEnabled, printerMode, onClose, onEdit, onConfirmOnly, onConfirmAndPrint }) {
+function CheckoutSummaryModal({ cart, paymentMethod, confirming, receiptText, printerEnabled, printerMode, onClose, onEdit, onConfirmOnly, onConfirmAndPrint, customerName, setCustomerName, customerDocument, setCustomerDocument }) {
     const total = cart.reduce((s, i) => s + i.lineTotal, 0);
     const labels = { efectivo: 'Efectivo', qr: 'QR', transferencia: 'Transferencia' };
 
@@ -400,6 +455,34 @@ function CheckoutSummaryModal({ cart, paymentMethod, confirming, receiptText, pr
                                 </div>
                             );
                         })}
+                        
+                        {/* CRM Info Input */}
+                        <div className="mt-4 p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 dark:bg-indigo-900/10 dark:border-indigo-800/30">
+                            <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 mb-3">Datos del Cliente (Opcional)</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nombre o Empresa</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Juan Pérez" 
+                                        value={customerName}
+                                        onChange={(e) => setCustomerName(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-slate-900 dark:border-slate-800 dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">NIT / CI</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="1234567" 
+                                        value={customerDocument}
+                                        onChange={(e) => setCustomerDocument(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none dark:bg-slate-900 dark:border-slate-800 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <div className="overflow-hidden flex flex-col">

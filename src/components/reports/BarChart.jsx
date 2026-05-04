@@ -24,7 +24,7 @@ export default function BarChart({ orders = [], subtitle = 'Unidades vendidas â€
     const hourLabel = (h) => `${String(h).padStart(2, '0')}:00`;
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-800">
+        <div className="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-5 dark:glass-dark h-full">
             <div className="flex items-start justify-between mb-5">
                 <div>
                     <h3 className="text-slate-800 font-semibold text-sm dark:text-slate-100">Ventas por Hora</h3>

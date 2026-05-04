@@ -166,27 +166,24 @@ export function useData() {
         }
     }, [loadLocalData, normalizeSettings, readLocalSettings, writeLocalSettings]);
 
-    const saveSale = async (saleData) => {
-        // saleData: { total, method, cartItems }
-        // cartItems: [{ product, qty, unitPrice, options }]
-        
+    const saveSale = useCallback(async (saleData) => {
         if (isConnected) {
             try {
-                // Map UI cart items to API structure
                 const payload = {
                     total: saleData.total,
                     payment_method: saleData.method,
+                    customer_name: saleData.customerName || null,
+                    customer_document: saleData.customerDocument || null,
                     items: saleData.cartItems.map(item => ({
                         product_id: item.product.id,
                         quantity: item.qty,
                         unit_price: item.product.price,
-                        options: item.options || {} // Include options
+                        options: item.options || {}
                     }))
                 };
 
                 const result = await salesService.createSale(payload);
 
-                // Update local state immediately
                 const newSale = {
                     ...result,
                     date: new Date(result.created_at).toDateString(),
@@ -202,7 +199,6 @@ export function useData() {
                 throw err;
             }
         } else {
-            // Offline fallback
             const newSale = {
                 id: Date.now(),
                 invoice_number: 'OFFLINE',
@@ -220,9 +216,9 @@ export function useData() {
             setSales(prev => [newSale, ...prev]);
             return newSale;
         }
-    };
+    }, [isConnected]);
 
-    const deleteSale = async (saleId) => {
+    const deleteSale = useCallback(async (saleId) => {
         if (isConnected) {
             await salesService.deleteSale(saleId);
             setSales(prev => prev.filter(s => String(s.id) !== String(saleId)));
@@ -233,9 +229,9 @@ export function useData() {
         const next = existing.filter(s => String(s.id) !== String(saleId));
         localStorage.setItem('acai_orders', JSON.stringify(next));
         setSales(prev => prev.filter(s => String(s.id) !== String(saleId)));
-    };
+    }, [isConnected]);
 
-    const saveBusinessSettings = async (partial) => {
+    const saveBusinessSettings = useCallback(async (partial) => {
         const local = readLocalSettings();
         const merged = normalizeSettings({ ...(settings || {}), ...(partial || {}) }, local);
         writeLocalSettings(merged);
@@ -276,17 +272,16 @@ export function useData() {
             }
             throw err;
         }
-    };
+    }, [isConnected, normalizeSettings, readLocalSettings, settings, writeLocalSettings]);
 
-    const updateInventory = async (id, newQty) => {
+    const updateInventory = useCallback(async (id, newQty) => {
         if (isConnected) {
              await inventoryService.adjustStock(id, newQty);
         }
-        // Local update
         const newInv = inventory.map(i => i.id === id ? { ...i, quantity: newQty } : i);
         setInventory(newInv);
         if (!isConnected) localStorage.setItem('acai_inventory', JSON.stringify(newInv));
-    };
+    }, [isConnected, inventory]);
 
     const loadMoreSales = useCallback(async () => {
         if (!isConnected || !hasMoreSales) return;

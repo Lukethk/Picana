@@ -228,8 +228,17 @@ function ToppingModal({ topping, onClose, onSave }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
-        await onSave(formData);
-        setSaving(false);
+        try {
+            await onSave({
+                ...formData,
+                price: parseFloat(formData.price) || 0,
+                stock: parseInt(formData.stock, 10) || 0
+            });
+        } catch (err) {
+            alert(err.message || 'Error guardando extra');
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -295,8 +304,13 @@ function FlavorModal({ flavor, onClose, onSave }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSaving(true);
-        await onSave(formData);
-        setSaving(false);
+        try {
+            await onSave(formData);
+        } catch (err) {
+            alert(err.message || 'Error guardando sabor');
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, UtensilsCrossed, Sparkles, IceCreamCone, FileText, Search, Trash2, X, Loader2, Printer, Download, HelpCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, FileText, Search, Trash2, X, Loader2, Printer, Download } from 'lucide-react';
 import StatCard from '../components/ui/StatCard';
 import BarChart from '../components/reports/BarChart';
 import PaymentBreakdown from '../components/reports/PaymentBreakdown';
@@ -193,9 +193,11 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
     }, [monthlyOrders]);
 
     const filteredHistory = (() => {
-        if (!searchTerm) return orders;
+        // In history tab, respect the period filter. Search adds secondary filter on top.
+        const source = activeTab === 'history' ? periodOrders : orders;
+        if (!searchTerm) return source;
         const q = searchTerm.toLowerCase();
-        return orders.filter(s => {
+        return source.filter(s => {
             const invoice = String(s.invoice_number || s.id || '').toLowerCase();
             const ts = s.ts ? new Date(s.ts).toLocaleString('es-BO').toLowerCase() : '';
             const total = String(s.total ?? '');
@@ -309,7 +311,7 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
 
             {activeTab === 'dashboard' ? (
                 <>
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                    <div className="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-5 dark:glass-dark mb-5">
                         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                             <div>
                                 <div className="flex items-center gap-1.5">
@@ -383,7 +385,7 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                    <div className="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-6 dark:glass-dark mb-6 mt-4">
                         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                             <div>
                                 <h3 className="text-slate-800 font-semibold text-sm">Reporte mensual</h3>
@@ -430,8 +432,8 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-                            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700">
+                            <div className="rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-900/50 dark:border-white/5 overflow-hidden">
+                                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-sm font-semibold text-slate-700 dark:text-slate-300">
                                     Ventas por día
                                 </div>
                                 <div className="overflow-x-auto">
@@ -462,8 +464,8 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
                                 </div>
                             </div>
 
-                            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-                                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700">
+                            <div className="rounded-2xl border border-slate-200 bg-white/50 dark:bg-slate-900/50 dark:border-white/5 overflow-hidden">
+                                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 text-sm font-semibold text-slate-700 dark:text-slate-300">
                                     Top productos
                                 </div>
                                 <div className="p-4">
@@ -507,9 +509,6 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
                             accent={netProfit >= 0 ? 'emerald' : 'rose'}
                             sub={netProfit >= 0 ? 'Ganancia neta' : 'Pérdida en el periodo'}
                         />
-                        <Tooltip text="La utilidad real se calcula restando los Gastos del total de Ventas.">
-                            <HelpCircle size={14} className="text-slate-400" />
-                        </Tooltip>
                         <StatCard
                             label="Ticket Promedio"
                             value={formatBs(periodOrders.length ? totalSales / periodOrders.length : 0)}
@@ -532,8 +531,8 @@ export default function ReportsPage({ sales = [], hasMoreSales, onLoadMoreSales,
                 </>
             ) : (
                 /* History View */
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg overflow-hidden dark:glass-dark">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/40">
                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
                             <FileText size={18} className="text-slate-400" />
                             Detalle de Transacciones
@@ -784,8 +783,8 @@ function TopBarsCard({ title, items }) {
     const max = Math.max(...(items || []).map(i => i.count), 1);
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-800">
-            <h3 className="text-slate-800 font-semibold text-sm mb-4 dark:text-slate-100">{title}</h3>
+        <div className="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg p-5 dark:glass-dark h-full">
+            <h3 className="text-slate-800 font-bold text-sm mb-5 dark:text-slate-100">{title}</h3>
             {(items || []).length === 0 ? (
                 <p className="text-slate-400 text-sm dark:text-slate-400">Sin datos para hoy</p>
             ) : (

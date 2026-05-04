@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Banknote, Smartphone, CreditCard } from 'lucide-react';
+import { ShoppingCart, Banknote, Smartphone } from 'lucide-react';
 import CartItem from './CartItem';
 import { formatBs } from '../../utils/format';
 
@@ -30,7 +30,7 @@ function Cart({ cart, onRemove, onQtyChange, paymentMethod, setPaymentMethod, on
                         <div className="flex flex-col items-center justify-center h-36 text-center">
                             <ShoppingCart size={28} className="text-slate-200 mb-2 dark:text-slate-700" />
                             <p className="text-slate-400 text-sm dark:text-slate-400">Sin productos</p>
-                            <p className="text-slate-300 text-xs dark:text-slate-500">Selecciona un vaso para empezar</p>
+                            <p className="text-slate-300 text-xs dark:text-slate-500">Selecciona un producto para empezar</p>
                         </div>
                     ) : (
                         cart.map(item => (

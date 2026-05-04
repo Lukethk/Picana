@@ -6,6 +6,8 @@ export function buildReceiptText({
     paymentMethod,
     createdAt,
     cartItems,
+    customerName,
+    customerDocument
 }) {
     const rc = receiptConfig || {};
     const pc = printerConfig || {};
@@ -66,6 +68,11 @@ export function buildReceiptText({
     if (showDatetime) lines.push(`Fecha: ${now.toLocaleString('es-BO')}`);
     if (showSaleId) lines.push(`Pedido: ${saleId ? `#${saleId}` : '#—'}`);
     if (showPayment) lines.push(`Método: ${methodLabel || '—'}`);
+    
+    if (customerName || customerDocument) lines.push('-'.repeat(charsPerLine));
+    if (customerName) lines.push(`Cliente: ${customerName}`);
+    if (customerDocument) lines.push(`NIT/CI: ${customerDocument}`);
+    
     lines.push('-'.repeat(charsPerLine));
 
     const items = Array.isArray(cartItems) ? cartItems : [];

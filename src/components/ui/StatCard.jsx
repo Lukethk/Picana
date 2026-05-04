@@ -12,7 +12,7 @@ export default function StatCard({ label, value, icon: Icon, sub, accent = 'indi
         <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex items-start gap-4"
+            className="glass rounded-2xl p-5 border border-white/40 dark:border-white/10 shadow-lg dark:shadow-2xl flex items-start gap-4 transition-transform hover:-translate-y-1 hover:shadow-xl dark:glass-dark"
         >
             <div className={`w-10 h-10 rounded-lg ${colors[accent] ?? colors.indigo} flex items-center justify-center flex-shrink-0`}>
                 <Icon size={18} className="text-white" />

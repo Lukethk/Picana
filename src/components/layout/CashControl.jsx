@@ -13,6 +13,7 @@ export default function CashControl({ onShiftChange }) {
     const [balance, setBalance] = useState('');
     const [summary, setSummary] = useState(null);
     const [closingProgress, setClosingProgress] = useState(false);
+    const [errorMsg, setErrorMsg] = useState(null);
 
     useEffect(() => {
         checkShift();
@@ -25,7 +26,9 @@ export default function CashControl({ onShiftChange }) {
             setShift(active);
             if (active && onShiftChange) onShiftChange(active);
         } catch (error) {
-            console.error(error);
+            console.error('No se pudo verificar el turno:', error);
+            // Don't block the UI — treat as no active shift
+            setShift(null);
         } finally {
             setLoading(false);
         }
@@ -36,6 +39,7 @@ export default function CashControl({ onShiftChange }) {
         const amount = parseFloat(balance);
         if (isNaN(amount) || amount < 0) return;
         
+        setErrorMsg(null);
         setClosingProgress(true);
         try {
             const newShift = await cashService.openShift(amount);
@@ -44,7 +48,7 @@ export default function CashControl({ onShiftChange }) {
             setBalance('');
             if (onShiftChange) onShiftChange(newShift);
         } catch (error) {
-            alert(error.message);
+            setErrorMsg(error.message || 'Error al abrir turno. Verifica la conexión.');
         } finally {
             setClosingProgress(false);
         }
@@ -53,12 +57,13 @@ export default function CashControl({ onShiftChange }) {
     const prepareClose = async () => {
         setIsClosing(true);
         setClosingProgress(true);
+        setErrorMsg(null);
         try {
             const totals = await cashService.getShiftTotals(shift.id, shift.created_at);
             const expected = shift.opening_balance + totals.cash - totals.expenses;
             setSummary({ ...totals, expected });
         } catch (error) {
-            alert(error.message);
+            setErrorMsg(error.message || 'Error al obtener totales del turno.');
             setIsClosing(false);
         } finally {
             setClosingProgress(false);
@@ -70,6 +75,7 @@ export default function CashControl({ onShiftChange }) {
         const actual = parseFloat(balance);
         if (isNaN(actual) || actual < 0) return;
 
+        setErrorMsg(null);
         setClosingProgress(true);
         try {
             await cashService.closeShift(
@@ -87,7 +93,7 @@ export default function CashControl({ onShiftChange }) {
             setSummary(null);
             if (onShiftChange) onShiftChange(null);
         } catch (error) {
-            alert(error.message);
+            setErrorMsg(error.message || 'Error al cerrar caja.');
         } finally {
             setClosingProgress(false);
         }
@@ -140,7 +146,7 @@ export default function CashControl({ onShiftChange }) {
             <AnimatePresence>
                 {isOpening && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => !closingProgress && setIsOpening(false)} />
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => { if (!closingProgress) { setIsOpening(false); setErrorMsg(null); } }} />
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -150,6 +156,13 @@ export default function CashControl({ onShiftChange }) {
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Abrir Caja</h3>
                             <p className="text-sm text-slate-500 mb-6">Indica con cuánto efectivo inicias el turno.</p>
                             
+                            {errorMsg && (
+                                <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl flex items-start gap-2 text-red-600 dark:text-red-400 text-sm">
+                                    <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                                    <span>{errorMsg}</span>
+                                </div>
+                            )}
+
                             <form onSubmit={handleOpenShift}>
                                 <div className="mb-6">
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Monto inicial (Bs)</label>
@@ -166,7 +179,7 @@ export default function CashControl({ onShiftChange }) {
                                 <div className="flex gap-3">
                                     <button 
                                         type="button" 
-                                        onClick={() => setIsOpening(false)}
+                                        onClick={() => { setIsOpening(false); setErrorMsg(null); }}
                                         className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                                     >
                                         Cancelar
@@ -189,7 +202,7 @@ export default function CashControl({ onShiftChange }) {
             <AnimatePresence>
                 {isClosing && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => !closingProgress && setIsClosing(false)} />
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => { if (!closingProgress) { setIsClosing(false); setErrorMsg(null); } }} />
                         <motion.div 
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -198,6 +211,13 @@ export default function CashControl({ onShiftChange }) {
                         >
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Cerrar Caja</h3>
                             
+                            {errorMsg && (
+                                <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl flex items-start gap-2 text-red-600 dark:text-red-400 text-sm">
+                                    <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                                    <span>{errorMsg}</span>
+                                </div>
+                            )}
+
                             {summary && (
                                 <div className="space-y-4 mb-6">
                                     <div className="grid grid-cols-2 gap-3">
@@ -251,7 +271,7 @@ export default function CashControl({ onShiftChange }) {
                             <div className="flex gap-3">
                                 <button 
                                     type="button" 
-                                    onClick={() => setIsClosing(false)}
+                                    onClick={() => { setIsClosing(false); setErrorMsg(null); }}
                                     className="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                                 >
                                     Cancelar

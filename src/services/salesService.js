@@ -4,18 +4,36 @@ import { supabase } from '../supabaseClient';
 export const salesService = {
     // POST /sales
     createSale: async (saleData) => {
-        // saleData: { total, payment_method, items: [{ product_id, quantity, unit_price }] }
-        
         // 1. Create Sale Header
-        const { data: sale, error: saleError } = await supabase
-            .from('sales')
-            .insert({
-                total: saleData.total,
-                payment_method: saleData.payment_method,
-                status: 'completed'
-            })
-            .select()
-            .single();
+        const saleInsert = {
+            total: saleData.total,
+            payment_method: saleData.payment_method,
+            status: 'completed'
+        };
+        if (saleData.customer_name) saleInsert.customer_name = saleData.customer_name;
+        if (saleData.customer_document) saleInsert.customer_document = saleData.customer_document;
+
+        let sale, saleError;
+        {
+            const res = await supabase
+                .from('sales')
+                .insert(saleInsert)
+                .select()
+                .single();
+            sale = res.data;
+            saleError = res.error;
+        }
+
+        // If customer columns don't exist, retry without them
+        if (saleError && String(saleError.message || '').toLowerCase().includes('customer_')) {
+            const res2 = await supabase
+                .from('sales')
+                .insert({ total: saleData.total, payment_method: saleData.payment_method, status: 'completed' })
+                .select()
+                .single();
+            sale = res2.data;
+            saleError = res2.error;
+        }
 
         if (saleError) throw saleError;
 
@@ -25,7 +43,7 @@ export const salesService = {
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
-            options: item.options || {} // Include options (toppings/flavors)
+            options: item.options || {}
         }));
 
         let itemsError;
